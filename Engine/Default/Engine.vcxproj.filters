@@ -1077,6 +1077,9 @@
     <ClInclude Include="..\private\PhysXCookedMeshFile.h">
       <Filter>Resource\PhysX\Geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\private\PhysXConversions.h">
+      <Filter>Component\PhysX</Filter>
+    </ClInclude>
     <ClInclude Include="..\public\ResPhysXCapsuleGeometry.h">
       <Filter>Resource\PhysX\Geometry\Capsule</Filter>
     </ClInclude>

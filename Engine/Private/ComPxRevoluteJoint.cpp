@@ -18,96 +18,6 @@ namespace
 {
 	constexpr _float REVOLUTE_LIMIT_DEGREES = 360.f;
 
-	_float ToRadians(_float fDegrees)
-	{
-		return XMConvertToRadians(fDegrees);
-	}
-
-	_float ToDegrees(_float fRadians)
-	{
-		return XMConvertToDegrees(fRadians);
-	}
-
-	PxQuat ToRevoluteJointNormalizedQuat(
-		const _float4& vRotation)
-	{
-		const PxQuat tRotation{
-			vRotation.x,
-			vRotation.y,
-			vRotation.z,
-			vRotation.w };
-
-		return tRotation.magnitudeSquared() > 0.f
-			? tRotation.getNormalized()
-			: PxQuat{ PxIdentity };
-	}
-
-	PxTransform ToRevoluteJointPxTransform(
-		const CComPxJoint::FRAME& tFrame)
-	{
-		return PxTransform{
-			PxVec3{
-				tFrame.vPosition.x,
-				tFrame.vPosition.y,
-				tFrame.vPosition.z },
-			ToRevoluteJointNormalizedQuat(tFrame.vRotation) };
-	}
-
-	CComPxJoint::FRAME ToRevoluteJointFrame(
-		const PxTransform& tTransform)
-	{
-		return {
-			.vPosition = {
-				tTransform.p.x,
-				tTransform.p.y,
-				tTransform.p.z },
-			.vRotation = {
-				tTransform.q.x,
-				tTransform.q.y,
-				tTransform.q.z,
-				tTransform.q.w }
-		};
-	}
-
-	void PreserveRevoluteJointCurrentPose(
-		CComPxJoint::DESC& tDesc)
-	{
-		PxRigidActor* pActorA =
-			tDesc.pRigidBodyA
-			? tDesc.pRigidBodyA->GetActor()
-			: (tDesc.pCharacterControllerA
-				? tDesc.pCharacterControllerA->GetActor()
-				: nullptr);
-		PxRigidActor* pActorB =
-			tDesc.pRigidBodyB
-			? tDesc.pRigidBodyB->GetActor()
-			: (tDesc.pCharacterControllerB
-				? tDesc.pCharacterControllerB->GetActor()
-				: nullptr);
-
-		if (pActorA && pActorB)
-		{
-			const PxTransform tPoseA = pActorA->getGlobalPose();
-			const PxTransform tPoseB = pActorB->getGlobalPose();
-
-			tDesc.tLocalFrameA = {};
-			tDesc.tLocalFrameB =
-				ToRevoluteJointFrame(tPoseB.getInverse() * tPoseA);
-		}
-		else if (pActorA)
-		{
-			tDesc.tLocalFrameA = {};
-			tDesc.tLocalFrameB =
-				ToRevoluteJointFrame(pActorA->getGlobalPose());
-		}
-		else if (pActorB)
-		{
-			tDesc.tLocalFrameA =
-				ToRevoluteJointFrame(pActorB->getGlobalPose());
-			tDesc.tLocalFrameB = {};
-		}
-	}
-
 	_bool IsValidLimitRange(
 		_float fLowerDegrees,
 		_float fUpperDegrees)
@@ -164,11 +74,11 @@ namespace
 		_float fDamping)
 	{
 		PxJointAngularLimitPair tLimit{
-			ToRadians(fLowerDegrees),
-			ToRadians(fUpperDegrees) };
+			XMConvertToRadians(fLowerDegrees),
+			XMConvertToRadians(fUpperDegrees) };
 		tLimit.restitution = fRestitution;
 		tLimit.bounceThreshold =
-			ToRadians(fBounceThresholdDegreesPerSecond);
+			XMConvertToRadians(fBounceThresholdDegreesPerSecond);
 		tLimit.stiffness = fStiffness;
 		tLimit.damping = fDamping;
 		return tLimit;
@@ -197,7 +107,7 @@ HRESULT CComPxRevoluteJoint::Initialize(void* pArg)
 
 	DESC tJointDesc = *pDesc;
 	if (tJointDesc.bPreserveCurrentPose)
-		PreserveRevoluteJointCurrentPose(tJointDesc);
+		PreserveCurrentPose(tJointDesc);
 
 	if (FAILED(CComPxJoint::Initialize(&tJointDesc)))
 		return E_FAIL;
@@ -209,9 +119,9 @@ HRESULT CComPxRevoluteJoint::Initialize(void* pArg)
 	PxRevoluteJoint* pJoint = PxRevoluteJointCreate(
 		*pPhysics,
 		GetActorA(),
-		ToRevoluteJointPxTransform(GetLocalFrameA()),
+		ToPxTransform(GetLocalFrameA()),
 		GetActorB(),
-		ToRevoluteJointPxTransform(GetLocalFrameB()));
+		ToPxTransform(GetLocalFrameB()));
 	if (!pJoint)
 		return E_FAIL;
 
@@ -223,7 +133,7 @@ HRESULT CComPxRevoluteJoint::Initialize(void* pArg)
 		tJointDesc.fLimitStiffness,
 		tJointDesc.fLimitDamping));
 	pJoint->setDriveVelocity(
-		ToRadians(tJointDesc.fDriveVelocityDegreesPerSecond));
+		XMConvertToRadians(tJointDesc.fDriveVelocityDegreesPerSecond));
 	pJoint->setDriveForceLimit(
 		tJointDesc.fDriveForceLimit);
 	pJoint->setDriveGearRatio(
@@ -255,25 +165,25 @@ PxRevoluteJoint* CComPxRevoluteJoint::GetRevoluteJoint() const
 _float CComPxRevoluteJoint::GetAngleDegrees() const
 {
 	const auto* pJoint = GetRevoluteJoint();
-	return pJoint ? ToDegrees(pJoint->getAngle()) : 0.f;
+	return pJoint ? XMConvertToDegrees(pJoint->getAngle()) : 0.f;
 }
 
 _float CComPxRevoluteJoint::GetVelocityDegreesPerSecond() const
 {
 	const auto* pJoint = GetRevoluteJoint();
-	return pJoint ? ToDegrees(pJoint->getVelocity()) : 0.f;
+	return pJoint ? XMConvertToDegrees(pJoint->getVelocity()) : 0.f;
 }
 
 _float CComPxRevoluteJoint::GetLowerLimitDegrees() const
 {
 	const auto* pJoint = GetRevoluteJoint();
-	return pJoint ? ToDegrees(pJoint->getLimit().lower) : 0.f;
+	return pJoint ? XMConvertToDegrees(pJoint->getLimit().lower) : 0.f;
 }
 
 _float CComPxRevoluteJoint::GetUpperLimitDegrees() const
 {
 	const auto* pJoint = GetRevoluteJoint();
-	return pJoint ? ToDegrees(pJoint->getLimit().upper) : 0.f;
+	return pJoint ? XMConvertToDegrees(pJoint->getLimit().upper) : 0.f;
 }
 
 _float CComPxRevoluteJoint::GetLimitRestitution() const
@@ -287,7 +197,7 @@ GetLimitBounceThresholdDegreesPerSecond() const
 {
 	const auto* pJoint = GetRevoluteJoint();
 	return pJoint
-		? ToDegrees(pJoint->getLimit().bounceThreshold)
+		? XMConvertToDegrees(pJoint->getLimit().bounceThreshold)
 		: 0.f;
 }
 
@@ -315,8 +225,8 @@ _bool CComPxRevoluteJoint::SetLimit(
 	}
 
 	PxJointAngularLimitPair tLimit = pJoint->getLimit();
-	tLimit.lower = ToRadians(fLowerDegrees);
-	tLimit.upper = ToRadians(fUpperDegrees);
+	tLimit.lower = XMConvertToRadians(fLowerDegrees);
+	tLimit.upper = XMConvertToRadians(fUpperDegrees);
 	pJoint->setLimit(tLimit);
 	return true;
 }
@@ -341,7 +251,7 @@ _bool CComPxRevoluteJoint::SetLimitResponse(
 	PxJointAngularLimitPair tLimit = pJoint->getLimit();
 	tLimit.restitution = fRestitution;
 	tLimit.bounceThreshold =
-		ToRadians(fBounceThresholdDegreesPerSecond);
+		XMConvertToRadians(fBounceThresholdDegreesPerSecond);
 	tLimit.stiffness = fStiffness;
 	tLimit.damping = fDamping;
 	pJoint->setLimit(tLimit);
@@ -353,7 +263,7 @@ GetDriveVelocityDegreesPerSecond() const
 {
 	const auto* pJoint = GetRevoluteJoint();
 	return pJoint
-		? ToDegrees(pJoint->getDriveVelocity())
+		? XMConvertToDegrees(pJoint->getDriveVelocity())
 		: 0.f;
 }
 
@@ -378,7 +288,7 @@ _bool CComPxRevoluteJoint::SetDriveVelocity(
 		return false;
 
 	pJoint->setDriveVelocity(
-		ToRadians(fDegreesPerSecond),
+		XMConvertToRadians(fDegreesPerSecond),
 		bAutoWake);
 	return true;
 }

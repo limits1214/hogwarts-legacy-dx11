@@ -14,89 +14,6 @@ using namespace physx;
 
 NS_USING(Engine)
 
-namespace
-{
-	PxQuat ToFixedJointNormalizedQuat(
-		const _float4& vRotation)
-	{
-		const PxQuat tRotation{
-			vRotation.x,
-			vRotation.y,
-			vRotation.z,
-			vRotation.w };
-
-		return tRotation.magnitudeSquared() > 0.f
-			? tRotation.getNormalized()
-			: PxQuat{ PxIdentity };
-	}
-
-	PxTransform ToFixedJointPxTransform(
-		const CComPxJoint::FRAME& tFrame)
-	{
-		return PxTransform{
-			PxVec3{
-				tFrame.vPosition.x,
-				tFrame.vPosition.y,
-				tFrame.vPosition.z },
-			ToFixedJointNormalizedQuat(tFrame.vRotation) };
-	}
-
-	CComPxJoint::FRAME ToFixedJointFrame(
-		const PxTransform& tTransform)
-	{
-		return {
-			.vPosition = {
-				tTransform.p.x,
-				tTransform.p.y,
-				tTransform.p.z },
-			.vRotation = {
-				tTransform.q.x,
-				tTransform.q.y,
-				tTransform.q.z,
-				tTransform.q.w }
-		};
-	}
-
-	void PreserveFixedJointCurrentPose(
-		CComPxJoint::DESC& tDesc)
-	{
-		PxRigidActor* pActorA =
-			tDesc.pRigidBodyA
-			? tDesc.pRigidBodyA->GetActor()
-			: (tDesc.pCharacterControllerA
-				? tDesc.pCharacterControllerA->GetActor()
-				: nullptr);
-		PxRigidActor* pActorB =
-			tDesc.pRigidBodyB
-			? tDesc.pRigidBodyB->GetActor()
-			: (tDesc.pCharacterControllerB
-				? tDesc.pCharacterControllerB->GetActor()
-				: nullptr);
-
-		if (pActorA && pActorB)
-		{
-			const PxTransform tPoseA = pActorA->getGlobalPose();
-			const PxTransform tPoseB = pActorB->getGlobalPose();
-
-			tDesc.tLocalFrameA = {};
-			tDesc.tLocalFrameB =
-				ToFixedJointFrame(tPoseB.getInverse() * tPoseA);
-		}
-		else if (pActorA)
-		{
-			tDesc.tLocalFrameA = {};
-			tDesc.tLocalFrameB =
-				ToFixedJointFrame(pActorA->getGlobalPose());
-		}
-		else if (pActorB)
-		{
-			tDesc.tLocalFrameA =
-				ToFixedJointFrame(pActorB->getGlobalPose());
-			tDesc.tLocalFrameB = {};
-		}
-	}
-}
-
 CComPxFixedJoint::CComPxFixedJoint()
 {
 }
@@ -119,7 +36,7 @@ HRESULT CComPxFixedJoint::Initialize(void* pArg)
 
 	CComPxJoint::DESC tJointDesc = *pDesc;
 	if (pDesc->bPreserveCurrentPose)
-		PreserveFixedJointCurrentPose(tJointDesc);
+		PreserveCurrentPose(tJointDesc);
 
 	if (FAILED(CComPxJoint::Initialize(&tJointDesc)))
 		return E_FAIL;
@@ -131,9 +48,9 @@ HRESULT CComPxFixedJoint::Initialize(void* pArg)
 	PxFixedJoint* pJoint = PxFixedJointCreate(
 		*pPhysics,
 		GetActorA(),
-		ToFixedJointPxTransform(GetLocalFrameA()),
+		ToPxTransform(GetLocalFrameA()),
 		GetActorB(),
-		ToFixedJointPxTransform(GetLocalFrameB()));
+		ToPxTransform(GetLocalFrameB()));
 	if (!pJoint)
 		return E_FAIL;
 

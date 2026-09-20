@@ -12,6 +12,7 @@
 #pragma push_macro("new")
 #undef new
 #include "PxPhysicsAPI.h"
+#include "PhysXConversions.h"
 #pragma pop_macro("new")
 
 NS_USING(Engine)
@@ -103,19 +104,6 @@ namespace
 			eMotion == PX_RAGDOLL_D6_MOTION::FREE;
 	}
 
-	PxQuat ToPxQuaternion(const _float4& vQuaternion)
-	{
-		PxQuat tQuaternion{
-			vQuaternion.x,
-			vQuaternion.y,
-			vQuaternion.z,
-			vQuaternion.w
-		};
-		return tQuaternion.magnitudeSquared() > 0.f
-			? tQuaternion.getNormalized()
-			: PxQuat{ PxIdentity };
-	}
-
 	_matrix MakePoseMatrix(
 		const _float3& vPosition,
 		const _float4& vRotation)
@@ -155,7 +143,7 @@ namespace
 				vPosition.x,
 				vPosition.y,
 				vPosition.z },
-			ToPxQuaternion(vQuaternion)
+			ToNormalizedPxQuat(vQuaternion)
 		};
 		return tOutTransform.isValid();
 	}
@@ -194,7 +182,7 @@ namespace
 		const PX_RAGDOLL_SHAPE_DESC& tShape)
 	{
 		PxQuat tRotation =
-			ToPxQuaternion(tShape.vLocalRotation);
+			ToNormalizedPxQuat(tShape.vLocalRotation);
 		if (tShape.eType ==
 			PX_RAGDOLL_SHAPE_TYPE::CAPSULE)
 		{
@@ -225,7 +213,7 @@ namespace
 				vPosition.x,
 				vPosition.y,
 				vPosition.z },
-			ToPxQuaternion(vRotation)
+			ToNormalizedPxQuat(vRotation)
 		};
 	}
 

@@ -23,16 +23,6 @@ namespace
 	constexpr _float D6_TWIST_LIMIT_DEGREES = 360.f;
 	constexpr _float D6_SWING_LIMIT_DEGREES = 180.f;
 
-	_float ToD6Radians(_float fDegrees)
-	{
-		return XMConvertToRadians(fDegrees);
-	}
-
-	_float ToD6Degrees(_float fRadians)
-	{
-		return XMConvertToDegrees(fRadians);
-	}
-
 	_bool IsD6Finite(const _float3& vValue)
 	{
 		return std::isfinite(vValue.x) &&
@@ -46,84 +36,6 @@ namespace
 			std::isfinite(vValue.y) &&
 			std::isfinite(vValue.z) &&
 			std::isfinite(vValue.w);
-	}
-
-	PxQuat ToD6NormalizedQuat(const _float4& vRotation)
-	{
-		const PxQuat tRotation{
-			vRotation.x,
-			vRotation.y,
-			vRotation.z,
-			vRotation.w };
-
-		return tRotation.magnitudeSquared() > 0.f
-			? tRotation.getNormalized()
-			: PxQuat{ PxIdentity };
-	}
-
-	PxTransform ToD6PxTransform(
-		const CComPxJoint::FRAME& tFrame)
-	{
-		return PxTransform{
-			PxVec3{
-				tFrame.vPosition.x,
-				tFrame.vPosition.y,
-				tFrame.vPosition.z },
-			ToD6NormalizedQuat(tFrame.vRotation) };
-	}
-
-	CComPxJoint::FRAME ToD6Frame(
-		const PxTransform& tTransform)
-	{
-		return {
-			.vPosition = {
-				tTransform.p.x,
-				tTransform.p.y,
-				tTransform.p.z },
-			.vRotation = {
-				tTransform.q.x,
-				tTransform.q.y,
-				tTransform.q.z,
-				tTransform.q.w }
-		};
-	}
-
-	void PreserveD6CurrentPose(CComPxJoint::DESC& tDesc)
-	{
-		PxRigidActor* pActorA =
-			tDesc.pRigidBodyA
-			? tDesc.pRigidBodyA->GetActor()
-			: (tDesc.pCharacterControllerA
-				? tDesc.pCharacterControllerA->GetActor()
-				: nullptr);
-		PxRigidActor* pActorB =
-			tDesc.pRigidBodyB
-			? tDesc.pRigidBodyB->GetActor()
-			: (tDesc.pCharacterControllerB
-				? tDesc.pCharacterControllerB->GetActor()
-				: nullptr);
-
-		if (pActorA && pActorB)
-		{
-			const PxTransform tPoseA = pActorA->getGlobalPose();
-			const PxTransform tPoseB = pActorB->getGlobalPose();
-
-			tDesc.tLocalFrameA = {};
-			tDesc.tLocalFrameB =
-				ToD6Frame(tPoseB.getInverse() * tPoseA);
-		}
-		else if (pActorA)
-		{
-			tDesc.tLocalFrameA = {};
-			tDesc.tLocalFrameB =
-				ToD6Frame(pActorA->getGlobalPose());
-		}
-		else if (pActorB)
-		{
-			tDesc.tLocalFrameA =
-				ToD6Frame(pActorB->getGlobalPose());
-			tDesc.tLocalFrameB = {};
-		}
 	}
 
 	_bool IsValidD6Axis(CComPxD6Joint::AXIS eAxis)
@@ -339,7 +251,7 @@ namespace
 	{
 		tLimit.restitution = tResponse.fRestitution;
 		tLimit.bounceThreshold = bAngular
-			? ToD6Radians(tResponse.fBounceThreshold)
+			? XMConvertToRadians(tResponse.fBounceThreshold)
 			: tResponse.fBounceThreshold;
 		tLimit.stiffness = tResponse.fStiffness;
 		tLimit.damping = tResponse.fDamping;
@@ -353,7 +265,7 @@ namespace
 		return {
 			.fRestitution = tLimit.restitution,
 			.fBounceThreshold = bAngular
-				? ToD6Degrees(tLimit.bounceThreshold)
+				? XMConvertToDegrees(tLimit.bounceThreshold)
 				: tLimit.bounceThreshold,
 			.fStiffness = tLimit.stiffness,
 			.fDamping = tLimit.damping
@@ -448,7 +360,7 @@ HRESULT CComPxD6Joint::Initialize(void* pArg)
 
 	DESC tJointDesc = *pDesc;
 	if (tJointDesc.bPreserveCurrentPose)
-		PreserveD6CurrentPose(tJointDesc);
+		PreserveCurrentPose(tJointDesc);
 
 	if (FAILED(CComPxJoint::Initialize(&tJointDesc)))
 		return E_FAIL;
@@ -460,9 +372,9 @@ HRESULT CComPxD6Joint::Initialize(void* pArg)
 	PxD6Joint* pJoint = PxD6JointCreate(
 		*pPhysics,
 		GetActorA(),
-		ToD6PxTransform(GetLocalFrameA()),
+		ToPxTransform(GetLocalFrameA()),
 		GetActorB(),
-		ToD6PxTransform(GetLocalFrameB()));
+		ToPxTransform(GetLocalFrameB()));
 	if (!pJoint)
 		return E_FAIL;
 
@@ -494,9 +406,9 @@ HRESULT CComPxD6Joint::Initialize(void* pArg)
 	}
 
 	PxJointAngularLimitPair tTwistLimit{
-		ToD6Radians(
+		XMConvertToRadians(
 			tJointDesc.tTwistLimit.fLowerDegrees),
-		ToD6Radians(
+		XMConvertToRadians(
 			tJointDesc.tTwistLimit.fUpperDegrees) };
 	ApplyD6LimitResponse(
 		tTwistLimit,
@@ -505,9 +417,9 @@ HRESULT CComPxD6Joint::Initialize(void* pArg)
 	pJoint->setTwistLimit(tTwistLimit);
 
 	PxJointLimitCone tSwingLimit{
-		ToD6Radians(
+		XMConvertToRadians(
 			tJointDesc.tSwingLimit.fYDegrees),
-		ToD6Radians(
+		XMConvertToRadians(
 			tJointDesc.tSwingLimit.fZDegrees) };
 	ApplyD6LimitResponse(
 		tSwingLimit,
@@ -536,7 +448,7 @@ HRESULT CComPxD6Joint::Initialize(void* pArg)
 	}
 
 	pJoint->setDrivePosition(
-		ToD6PxTransform(tJointDesc.tDrivePose),
+		ToPxTransform(tJointDesc.tDrivePose),
 		false);
 	pJoint->setDriveVelocity(
 		PxVec3{
@@ -544,13 +456,13 @@ HRESULT CComPxD6Joint::Initialize(void* pArg)
 			tJointDesc.vDriveLinearVelocity.y,
 			tJointDesc.vDriveLinearVelocity.z },
 		PxVec3{
-			ToD6Radians(
+			XMConvertToRadians(
 				tJointDesc
 				.vDriveAngularVelocityDegreesPerSecond.x),
-			ToD6Radians(
+			XMConvertToRadians(
 				tJointDesc
 				.vDriveAngularVelocityDegreesPerSecond.y),
-			ToD6Radians(
+			XMConvertToRadians(
 				tJointDesc
 				.vDriveAngularVelocityDegreesPerSecond.z) },
 		false);
@@ -653,8 +565,8 @@ _bool CComPxD6Joint::SetTwistLimit(
 	}
 
 	PxJointAngularLimitPair tLimit{
-		ToD6Radians(tLimitDesc.fLowerDegrees),
-		ToD6Radians(tLimitDesc.fUpperDegrees) };
+		XMConvertToRadians(tLimitDesc.fLowerDegrees),
+		XMConvertToRadians(tLimitDesc.fUpperDegrees) };
 	ApplyD6LimitResponse(
 		tLimit,
 		tLimitDesc.tResponse,
@@ -673,8 +585,8 @@ CComPxD6Joint::GetTwistLimit() const
 	const PxJointAngularLimitPair tLimit =
 		pJoint->getTwistLimit();
 	return {
-		.fLowerDegrees = ToD6Degrees(tLimit.lower),
-		.fUpperDegrees = ToD6Degrees(tLimit.upper),
+		.fLowerDegrees = XMConvertToDegrees(tLimit.lower),
+		.fUpperDegrees = XMConvertToDegrees(tLimit.upper),
 		.tResponse = GetD6LimitResponse(
 			tLimit,
 			true)
@@ -692,8 +604,8 @@ _bool CComPxD6Joint::SetSwingLimit(
 	}
 
 	PxJointLimitCone tLimit{
-		ToD6Radians(tLimitDesc.fYDegrees),
-		ToD6Radians(tLimitDesc.fZDegrees) };
+		XMConvertToRadians(tLimitDesc.fYDegrees),
+		XMConvertToRadians(tLimitDesc.fZDegrees) };
 	ApplyD6LimitResponse(
 		tLimit,
 		tLimitDesc.tResponse,
@@ -712,8 +624,8 @@ CComPxD6Joint::GetSwingLimit() const
 	const PxJointLimitCone tLimit =
 		pJoint->getSwingLimit();
 	return {
-		.fYDegrees = ToD6Degrees(tLimit.yAngle),
-		.fZDegrees = ToD6Degrees(tLimit.zAngle),
+		.fYDegrees = XMConvertToDegrees(tLimit.yAngle),
+		.fZDegrees = XMConvertToDegrees(tLimit.zAngle),
 		.tResponse = GetD6LimitResponse(
 			tLimit,
 			true)
@@ -724,7 +636,7 @@ _float CComPxD6Joint::GetTwistAngleDegrees() const
 {
 	const auto* pJoint = GetD6Joint();
 	return pJoint
-		? ToD6Degrees(pJoint->getTwistAngle())
+		? XMConvertToDegrees(pJoint->getTwistAngle())
 		: 0.f;
 }
 
@@ -732,7 +644,7 @@ _float CComPxD6Joint::GetSwingYAngleDegrees() const
 {
 	const auto* pJoint = GetD6Joint();
 	return pJoint
-		? ToD6Degrees(pJoint->getSwingYAngle())
+		? XMConvertToDegrees(pJoint->getSwingYAngle())
 		: 0.f;
 }
 
@@ -740,7 +652,7 @@ _float CComPxD6Joint::GetSwingZAngleDegrees() const
 {
 	const auto* pJoint = GetD6Joint();
 	return pJoint
-		? ToD6Degrees(pJoint->getSwingZAngle())
+		? XMConvertToDegrees(pJoint->getSwingZAngle())
 		: 0.f;
 }
 
@@ -820,7 +732,7 @@ _bool CComPxD6Joint::SetDrivePose(
 	}
 
 	pJoint->setDrivePosition(
-		ToD6PxTransform(tPose),
+		ToPxTransform(tPose),
 		bAutoWake);
 	return true;
 }
@@ -829,7 +741,7 @@ CComPxJoint::FRAME CComPxD6Joint::GetDrivePose() const
 {
 	const auto* pJoint = GetD6Joint();
 	return pJoint
-		? ToD6Frame(pJoint->getDrivePosition())
+		? FromPxTransform(pJoint->getDrivePosition())
 		: FRAME{};
 }
 
@@ -853,11 +765,11 @@ _bool CComPxD6Joint::SetDriveVelocity(
 			vLinearVelocity.y,
 			vLinearVelocity.z },
 		PxVec3{
-			ToD6Radians(
+			XMConvertToRadians(
 				vAngularVelocityDegreesPerSecond.x),
-			ToD6Radians(
+			XMConvertToRadians(
 				vAngularVelocityDegreesPerSecond.y),
-			ToD6Radians(
+			XMConvertToRadians(
 				vAngularVelocityDegreesPerSecond.z) },
 		bAutoWake);
 	return true;
@@ -883,9 +795,9 @@ void CComPxD6Joint::GetDriveVelocity(
 		vLinear.z
 	};
 	vOutAngularVelocityDegreesPerSecond = {
-		ToD6Degrees(vAngular.x),
-		ToD6Degrees(vAngular.y),
-		ToD6Degrees(vAngular.z)
+		XMConvertToDegrees(vAngular.x),
+		XMConvertToDegrees(vAngular.y),
+		XMConvertToDegrees(vAngular.z)
 	};
 }
 

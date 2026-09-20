@@ -339,6 +339,7 @@
     <ClInclude Include="..\public\ResPhysXConvexGeometry.h" />
     <ClInclude Include="..\public\ResPhysXRTConvexGeometry.h" />
     <ClInclude Include="..\private\PhysXCookedMeshFile.h" />
+    <ClInclude Include="..\private\PhysXConversions.h" />
     <ClInclude Include="..\public\DbgLineRender.h" />
     <ClInclude Include="..\Public\DInputManager.h" />
     <ClInclude Include="..\Public\Engine_Assimp_Enum.h" />

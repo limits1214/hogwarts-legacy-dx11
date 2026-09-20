@@ -14,31 +14,6 @@ NS_USING(Engine)
 
 namespace
 {
-	PxQuat ToDistanceJointNormalizedQuat(
-		const _float4& vRotation)
-	{
-		const PxQuat tRotation{
-			vRotation.x,
-			vRotation.y,
-			vRotation.z,
-			vRotation.w };
-
-		return tRotation.magnitudeSquared() > 0.f
-			? tRotation.getNormalized()
-			: PxQuat{ PxIdentity };
-	}
-
-	PxTransform ToDistanceJointPxTransform(
-		const CComPxJoint::FRAME& tFrame)
-	{
-		return PxTransform{
-			PxVec3{
-				tFrame.vPosition.x,
-				tFrame.vPosition.y,
-				tFrame.vPosition.z },
-			ToDistanceJointNormalizedQuat(tFrame.vRotation) };
-	}
-
 	_bool IsValidDistanceJointDesc(
 		const CComPxDistanceJoint::DESC& tDesc)
 	{
@@ -85,9 +60,9 @@ HRESULT CComPxDistanceJoint::Initialize(void* pArg)
 	PxDistanceJoint* pJoint = PxDistanceJointCreate(
 		*pPhysics,
 		GetActorA(),
-		ToDistanceJointPxTransform(GetLocalFrameA()),
+		ToPxTransform(GetLocalFrameA()),
 		GetActorB(),
-		ToDistanceJointPxTransform(GetLocalFrameB()));
+		ToPxTransform(GetLocalFrameB()));
 	if (!pJoint)
 		return E_FAIL;
 

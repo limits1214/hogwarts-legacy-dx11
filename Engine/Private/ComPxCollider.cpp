@@ -7,21 +7,13 @@
 #undef new
 
 #include "PxPhysicsAPI.h"
+#include "PhysXConversions.h"
 
 #pragma pop_macro("new")
 
 using namespace physx;
 
 NS_USING(Engine)
-
-namespace
-{
-	PxQuat ToColliderNormalizedQuat(const _float4& vQuaternion)
-	{
-		PxQuat tQuat{ vQuaternion.x, vQuaternion.y, vQuaternion.z, vQuaternion.w };
-		return tQuat.magnitudeSquared() > 0.f ? tQuat.getNormalized() : PxQuat{ PxIdentity };
-	}
-}
 
 _bool CComPxCollider::SetTrigger(_bool bTrigger)
 {
@@ -133,7 +125,7 @@ _bool CComPxCollider::SetLocalRotation(const _float4& vQuaternion)
 		return false;
 
 	PxTransform tPose = m_pShape->getLocalPose();
-	tPose.q = ToColliderNormalizedQuat(vQuaternion);
+	tPose.q = ToNormalizedPxQuat(vQuaternion);
 	m_pShape->setLocalPose(tPose);
 	return true;
 }

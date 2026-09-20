@@ -17,46 +17,6 @@
 
 NS_USING(Client)
 
-namespace Client::NvClothCapeDetail
-{
-	_bool MakeRigidMatrix(
-		_fmatrix Matrix,
-		_matrix& OutRigidMatrix)
-	{
-		_vector vScale{};
-		_vector qRotation{};
-		_vector vTranslation{};
-		if (!XMMatrixDecompose(
-			&vScale,
-			&qRotation,
-			&vTranslation,
-			Matrix))
-		{
-			return false;
-		}
-
-		qRotation = XMQuaternionNormalize(qRotation);
-		OutRigidMatrix =
-			XMMatrixRotationQuaternion(qRotation) *
-			XMMatrixTranslationFromVector(vTranslation);
-		return true;
-	}
-
-	_matrix MakePoseMatrix(
-		const _float3& vPosition,
-		const _float4& vRotation)
-	{
-		return
-			XMMatrixRotationQuaternion(
-				XMQuaternionNormalize(
-					XMLoadFloat4(&vRotation))) *
-			XMMatrixTranslation(
-				vPosition.x,
-				vPosition.y,
-				vPosition.z);
-	}
-}
-
 CNvClothCape::CNvClothCape()
 	: CGameObject{}
 {
@@ -1065,6 +1025,26 @@ void CNvClothCape::RequestClothWindImpulse(
 	m_fClothWindImpulseRemaining = fDuration;
 }
 
+_bool CNvClothCape::MakeRigidMatrix(_fmatrix Matrix, _matrix& OutRigidMatrix)
+{
+	_vector vScale{};
+	_vector qRotation{};
+	_vector vTranslation{};
+	if (!XMMatrixDecompose(&vScale, &qRotation, &vTranslation, Matrix))
+		return false;
+
+	qRotation = XMQuaternionNormalize(qRotation);
+	OutRigidMatrix = XMMatrixRotationQuaternion(qRotation) *
+		XMMatrixTranslationFromVector(vTranslation);
+	return true;
+}
+
+_matrix CNvClothCape::MakePoseMatrix(const _float3& vPosition, const _float4& vRotation)
+{
+	return XMMatrixRotationQuaternion(XMQuaternionNormalize(XMLoadFloat4(&vRotation))) *
+		XMMatrixTranslation(vPosition.x, vPosition.y, vPosition.z);
+}
+
 _bool CNvClothCape::ResolveAttachment()
 {
 	auto* pTarget =
@@ -1318,7 +1298,7 @@ _bool CNvClothCape::UpdateAnimationConstraints(
 		}
 
 		_matrix BoneWorldRigid{};
-		if (!NvClothCapeDetail::MakeRigidMatrix(
+		if (!MakeRigidMatrix(
 			BoneMatrix * TargetWorld,
 			BoneWorldRigid))
 		{
@@ -1622,7 +1602,7 @@ _bool CNvClothCape::AppendCollisionsFromRig(
 		}
 
 		_matrix BoneWorld{};
-		if (!NvClothCapeDetail::MakeRigidMatrix(
+		if (!MakeRigidMatrix(
 			BoneMatrix * TargetWorld,
 			BoneWorld))
 		{
@@ -1630,8 +1610,8 @@ _bool CNvClothCape::AppendCollisionsFromRig(
 		}
 
 		_matrix ShapeWorld{};
-		if (!NvClothCapeDetail::MakeRigidMatrix(
-			NvClothCapeDetail::MakePoseMatrix(
+		if (!MakeRigidMatrix(
+			MakePoseMatrix(
 				Shape.vLocalPosition,
 				Shape.vLocalRotation) *
 			BoneWorld,
@@ -2287,7 +2267,7 @@ _bool CNvClothCape::UpdateBodyCollisions(
 	}
 
 	_matrix SimulationWorld{};
-	if (!NvClothCapeDetail::MakeRigidMatrix(
+	if (!MakeRigidMatrix(
 		GetTransform().
 			GetLoadedCombinedWorldMatrix(),
 		SimulationWorld))
@@ -2806,7 +2786,7 @@ _bool CNvClothCape::UpdateAttachment(
 	}
 
 	_matrix AttachmentWorld{};
-	if (!NvClothCapeDetail::MakeRigidMatrix(
+	if (!MakeRigidMatrix(
 		BoneMatrix *
 			pTarget->GetTransform().
 			GetLoadedCombinedWorldMatrix(),
@@ -2830,7 +2810,7 @@ _bool CNvClothCape::UpdateAttachment(
 	}
 
 	_matrix SimulationWorld{};
-	if (!NvClothCapeDetail::MakeRigidMatrix(
+	if (!MakeRigidMatrix(
 		GetTransform().
 			GetLoadedCombinedWorldMatrix(),
 		SimulationWorld))

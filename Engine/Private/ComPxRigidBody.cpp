@@ -8,6 +8,7 @@
 #undef new
 
 #include "PxPhysicsAPI.h"
+#include "PhysXConversions.h"
 
 #pragma pop_macro("new")
 
@@ -20,12 +21,6 @@ namespace
 	PxRigidDynamic* GetDynamicActor(PxRigidActor* pActor)
 	{
 		return pActor ? pActor->is<PxRigidDynamic>() : nullptr;
-	}
-
-	PxQuat ToRigidBodyNormalizedQuat(const _float4& vQuaternion)
-	{
-		PxQuat tQuat{ vQuaternion.x, vQuaternion.y, vQuaternion.z, vQuaternion.w };
-		return tQuat.magnitudeSquared() > 0.f ? tQuat.getNormalized() : PxQuat{ PxIdentity };
 	}
 }
 
@@ -82,7 +77,7 @@ _bool CComPxRigidBody::SetRotation(const _float4& vQuaternion)
 		return false;
 
 	PxTransform tPose = m_pActor->getGlobalPose();
-	tPose.q = ToRigidBodyNormalizedQuat(vQuaternion);
+	tPose.q = ToNormalizedPxQuat(vQuaternion);
 	m_pActor->setGlobalPose(tPose);
 	return true;
 }
@@ -103,7 +98,7 @@ _bool CComPxRigidBody::SetPose(const _float3& vPosition, const _float4& vQuatern
 
 	m_pActor->setGlobalPose(PxTransform{
 		PxVec3{ vPosition.x, vPosition.y, vPosition.z },
-		ToRigidBodyNormalizedQuat(vQuaternion) });
+		ToNormalizedPxQuat(vQuaternion) });
 	return true;
 }
 
@@ -235,7 +230,7 @@ _bool CComPxRigidBody::SetKinematicTarget(const _float3& vPosition, const _float
 
 	pDynamic->setKinematicTarget(PxTransform{
 		PxVec3{ vPosition.x, vPosition.y, vPosition.z },
-		ToRigidBodyNormalizedQuat(vQuaternion) });
+		ToNormalizedPxQuat(vQuaternion) });
 	return true;
 }
 

@@ -5,6 +5,7 @@ namespace physx
 {
 	class PxJoint;
 	class PxRigidActor;
+	template<typename T> class PxTransformT;
 }
 
 NS_BEGIN(Engine)
@@ -101,6 +102,9 @@ protected:
 protected:
 	HRESULT Initialize(void* pArg) override;
 	_bool AttachJoint(physx::PxJoint* pJoint);
+	static physx::PxTransformT<float> ToPxTransform(const FRAME& tFrame);
+	static FRAME FromPxTransform(const physx::PxTransformT<float>& tTransform);
+	static void PreserveCurrentPose(DESC& tDesc);
 
 	physx::PxRigidActor* GetActorA() const;
 	physx::PxRigidActor* GetActorB() const;

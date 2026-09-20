@@ -161,6 +161,9 @@ private:
 	};
 
 private:
+	static _bool MakeRigidMatrix(_fmatrix Matrix, _matrix& OutRigidMatrix);
+	static _matrix MakePoseMatrix(const _float3& vPosition, const _float4& vRotation);
+
 	_bool UpdateAttachment(
 		_bool bUpdateSimulation,
 		_bool bForceTeleport = false);

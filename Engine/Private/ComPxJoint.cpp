@@ -10,6 +10,7 @@
 #undef new
 
 #include "PxPhysicsAPI.h"
+#include "PhysXConversions.h"
 
 #pragma pop_macro("new")
 
@@ -19,48 +20,6 @@ NS_USING(Engine)
 
 namespace
 {
-	PxQuat ToJointNormalizedQuat(const _float4& vRotation)
-	{
-		const PxQuat tRotation{
-			vRotation.x,
-			vRotation.y,
-			vRotation.z,
-			vRotation.w };
-
-		return tRotation.magnitudeSquared() > 0.f
-			? tRotation.getNormalized()
-			: PxQuat{ PxIdentity };
-	}
-
-	PxTransform ToJointPxTransform(
-		const CComPxJoint::FRAME& tFrame)
-	{
-		return PxTransform{
-			PxVec3{
-				tFrame.vPosition.x,
-				tFrame.vPosition.y,
-				tFrame.vPosition.z },
-			ToJointNormalizedQuat(tFrame.vRotation) };
-	}
-
-	CComPxJoint::FRAME FromJointPxTransform(
-		const PxTransform& tTransform)
-	{
-		CComPxJoint::FRAME tFrame{};
-		tFrame.vPosition = {
-			tTransform.p.x,
-			tTransform.p.y,
-			tTransform.p.z
-		};
-		tFrame.vRotation = {
-			tTransform.q.x,
-			tTransform.q.y,
-			tTransform.q.z,
-			tTransform.q.w
-		};
-		return tFrame;
-	}
-
 	PxJointActorIndex::Enum ToJointPxActorIndex(
 		CComPxJoint::ACTOR eActor)
 	{
@@ -81,6 +40,66 @@ namespace
 				tTransform.p.x,
 				tTransform.p.y,
 				tTransform.p.z);
+	}
+}
+
+PxTransform CComPxJoint::ToPxTransform(const FRAME& tFrame)
+{
+	return PxTransform{
+		PxVec3{
+			tFrame.vPosition.x,
+			tFrame.vPosition.y,
+			tFrame.vPosition.z },
+		ToNormalizedPxQuat(tFrame.vRotation) };
+}
+
+CComPxJoint::FRAME CComPxJoint::FromPxTransform(
+	const PxTransform& tTransform)
+{
+	return {
+		.vPosition = {
+			tTransform.p.x,
+			tTransform.p.y,
+			tTransform.p.z },
+		.vRotation = {
+			tTransform.q.x,
+			tTransform.q.y,
+			tTransform.q.z,
+			tTransform.q.w }
+	};
+}
+
+void CComPxJoint::PreserveCurrentPose(DESC& tDesc)
+{
+	PxRigidActor* pActorA = nullptr;
+	if (tDesc.pRigidBodyA)
+		pActorA = tDesc.pRigidBodyA->GetActor();
+	else if (tDesc.pCharacterControllerA)
+		pActorA = tDesc.pCharacterControllerA->GetActor();
+
+	PxRigidActor* pActorB = nullptr;
+	if (tDesc.pRigidBodyB)
+		pActorB = tDesc.pRigidBodyB->GetActor();
+	else if (tDesc.pCharacterControllerB)
+		pActorB = tDesc.pCharacterControllerB->GetActor();
+
+	if (pActorA && pActorB)
+	{
+		const PxTransform tPoseA = pActorA->getGlobalPose();
+		const PxTransform tPoseB = pActorB->getGlobalPose();
+		tDesc.tLocalFrameA = {};
+		tDesc.tLocalFrameB =
+			FromPxTransform(tPoseB.getInverse() * tPoseA);
+	}
+	else if (pActorA)
+	{
+		tDesc.tLocalFrameA = {};
+		tDesc.tLocalFrameB = FromPxTransform(pActorA->getGlobalPose());
+	}
+	else if (pActorB)
+	{
+		tDesc.tLocalFrameA = FromPxTransform(pActorB->getGlobalPose());
+		tDesc.tLocalFrameB = {};
 	}
 }
 
@@ -360,7 +379,7 @@ _bool CComPxJoint::SetLocalFrame(
 
 	m_pJoint->setLocalPose(
 		ToJointPxActorIndex(eActor),
-		ToJointPxTransform(tFrame));
+		ToPxTransform(tFrame));
 
 	if (eActor == ACTOR::A)
 	{
@@ -411,11 +430,11 @@ _bool CComPxJoint::RelocateWorldAnchoredRigidBody(
 
 	const PxTransform tNewRigidBodyPose{
 		PxVec3{ vPosition.x, vPosition.y, vPosition.z },
-		ToJointNormalizedQuat(vRotation)
+		ToNormalizedPxQuat(vRotation)
 	};
-	const FRAME tNewWorldFrame = FromJointPxTransform(
+	const FRAME tNewWorldFrame = FromPxTransform(
 		tNewRigidBodyPose *
-		ToJointPxTransform(*pRigidBodyLocalFrame));
+		ToPxTransform(*pRigidBodyLocalFrame));
 	const _float4 vNormalizedRotation{
 		tNewRigidBodyPose.q.x,
 		tNewRigidBodyPose.q.y,
@@ -490,9 +509,9 @@ _bool CComPxJoint::SetWorldAnchoredRigidBodyLocalFrame(
 
 	const PxTransform tWorldFrame =
 		pRigidBody->GetActor()->getGlobalPose() *
-		ToJointPxTransform(tRigidBodyLocalFrame);
+		ToPxTransform(tRigidBodyLocalFrame);
 	const FRAME tMatchingWorldFrame =
-		FromJointPxTransform(tWorldFrame);
+		FromPxTransform(tWorldFrame);
 
 	const _bool bWasEnabled = IsEnabled();
 	if (bWasEnabled && !SetEnabled(false))
