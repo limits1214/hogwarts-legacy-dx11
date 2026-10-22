@@ -25,6 +25,40 @@
 NS_BEGIN(Engine)
 NS_BEGIN(SerializeTest)
 
+// 영상 캡처용: 데이터 항목 정의와 JSON 저장·불러오기 예제
+
+struct DUMMY_TEST_DATA final : public ISerializable
+{
+	std::string sName{ "Player" };
+	int iHealth{ 100 };
+	_float3 vPosition{ 1.f, 2.f, 3.f };
+
+	void Serialize(ISerializer& serializer) const override
+	{
+		serializer.Write("Name", sName);
+		serializer.Write("Health", iHealth);
+		serializer.Write("Position", vPosition);
+	}
+
+	void Deserialize(IDeserializer& deserializer) override
+	{
+		deserializer.Read("Name", sName);
+		deserializer.Read("Health", iHealth);
+		deserializer.Read("Position", vPosition);
+	}
+};
+
+inline HRESULT SaveAndLoadDummyTestData(CSerializeManager& manager)
+{
+	const std::string path = "./DummyTestData.json";
+	DUMMY_TEST_DATA original{};
+	if (FAILED(manager.JsonSerialize(path, original, "DummyTestData")))
+		return E_FAIL;
+
+	DUMMY_TEST_DATA restored{};
+	return manager.JsonDeSerialize(path, restored, "DummyTestData");
+}
+
 struct REGRESSION_REPORT
 {
 	size_t iPassed{};

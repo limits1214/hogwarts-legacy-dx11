@@ -17,6 +17,11 @@
 #include "UIController.h"
 #include "VideoObject.h"
 #include "TextureUI.h"
+#include <chrono>
+#include <iomanip>
+#include <memory>
+#include <sstream>
+#include <vector>
 
 NS_USING(Client)
 
@@ -45,6 +50,105 @@ HRESULT CLevelLogo::Initialize()
 	//		return E_FAIL;
 	//	}
 	//}
+
+
+	// 여기다 테스트용 벤치마크 코드
+#pragma region StringID_DerivedType_Benchmark
+	{
+		// [LSY] 벤치마크는 기본 비활성화. 측정할 때만 true로 변경한다.
+		constexpr bool bRunBenchmark = false;
+		static bool bBenchmarkCompleted = false;
+		if (bRunBenchmark && !bBenchmarkCompleted)
+		{
+			bBenchmarkCompleted = true;
+			constexpr size_t iIterations = 1'000'000;
+			constexpr size_t iSampleCount = 256;
+			std::vector<std::string> leftStrings;
+			std::vector<std::string> rightStrings;
+			std::vector<E::StringID> leftIDs;
+			std::vector<E::StringID> rightIDs;
+			leftStrings.reserve(iSampleCount);
+			rightStrings.reserve(iSampleCount);
+			leftIDs.reserve(iSampleCount);
+			rightIDs.reserve(iSampleCount);
+			for (size_t i = 0; i < iSampleCount; ++i)
+			{
+				// 같은 길이와 공통 접두사. 절반은 동일하고 절반은 마지막 문자만 다르다.
+				leftStrings.push_back("Prototype_GameObject_Benchmark_Resource_" + std::to_string(i) + "_A");
+				rightStrings.push_back(leftStrings.back());
+				if (i % 2 != 0)
+					rightStrings.back().back() = 'B';
+				leftIDs.emplace_back(leftStrings.back());
+				rightIDs.emplace_back(rightStrings.back());
+			}
+
+			// [LSY] 결과 저장을 유지하고 캐스팅할 포인터를 매 반복마다 읽는다.
+			volatile bool bEqualResult = false;
+			CLevelLogo* volatile pCastResult = nullptr;
+			E::CLevel* volatile pBase = this;
+
+			// std::string 비교
+			auto start = std::chrono::steady_clock::now();
+			for (size_t i = 0; i < iIterations; ++i)
+			{
+				const size_t index = i % iSampleCount;
+				bEqualResult = leftStrings[index] == rightStrings[index];
+			}
+			const double stringTime = std::chrono::duration<double, std::milli>(
+				std::chrono::steady_clock::now() - start).count();
+
+			// StringID 비교
+			start = std::chrono::steady_clock::now();
+			for (size_t i = 0; i < iIterations; ++i)
+			{
+				const size_t index = i % iSampleCount;
+				bEqualResult = leftIDs[index] == rightIDs[index];
+			}
+			const double stringIDTime = std::chrono::duration<double, std::milli>(
+				std::chrono::steady_clock::now() - start).count();
+
+			// static_cast
+			start = std::chrono::steady_clock::now();
+			for (size_t i = 0; i < iIterations; ++i)
+			{
+				pCastResult = static_cast<CLevelLogo*>(pBase);
+			}
+			const double staticTime = std::chrono::duration<double, std::milli>(
+				std::chrono::steady_clock::now() - start).count();
+
+			// dynamic_cast
+			start = std::chrono::steady_clock::now();
+			for (size_t i = 0; i < iIterations; ++i)
+			{
+				pCastResult = dynamic_cast<CLevelLogo*>(pBase);
+			}
+			const double dynamicTime = std::chrono::duration<double, std::milli>(
+				std::chrono::steady_clock::now() - start).count();
+
+			// DerivedType 기반 Engine::Cast
+			start = std::chrono::steady_clock::now();
+			for (size_t i = 0; i < iIterations; ++i)
+			{
+				pCastResult = E::Cast<CLevelLogo>(pBase);
+			}
+			const double derivedTime = std::chrono::duration<double, std::milli>(
+				std::chrono::steady_clock::now() - start).count();
+
+			std::wostringstream stringResult;
+			stringResult << std::fixed << std::setprecision(3)
+				<< L"std::string: " << stringTime << L" ms\n"
+				<< L"StringID: " << stringIDTime << L" ms";
+			MessageBoxW(nullptr, stringResult.str().c_str(), L"StringID 비교 - 100만 회", MB_OK);
+
+			std::wostringstream castResult;
+			castResult << std::fixed << std::setprecision(3)
+				<< L"static_cast: " << staticTime << L" ms\n"
+				<< L"dynamic_cast: " << dynamicTime << L" ms\n"
+				<< L"Engine::Cast: " << derivedTime << L" ms";
+			MessageBoxW(nullptr, castResult.str().c_str(), L"캐스팅 비교 - 100만 회", MB_OK);
+		}
+	}
+#pragma endregion
 
 	{
 		E::CCameraObject::CAMERA_DESC Desc{};
@@ -85,6 +189,72 @@ HRESULT CLevelLogo::Initialize()
 			{
 				int x = 0;
 			}
+
+#pragma region SharedPtr_Handle_Benchmark
+			{
+				// [LSY] 참조 방식 벤치마크는 측정할 때만 true로 변경한다.
+				constexpr bool bRunReferenceBenchmark = false;
+				static bool bReferenceBenchmarkCompleted = false;
+				if (bRunReferenceBenchmark && !bReferenceBenchmarkCompleted)
+				{
+					bReferenceBenchmarkCompleted = true;
+					constexpr size_t iIterations = 1'000'000;
+					auto& game = E::CGameInstance::Get();
+					const CHandle handle = uiCam.value();
+					E::CGameObject* pObject = game.GetGameObjectByHandle(handle);
+					// [LSY] 객체의 실제 소유권은 매니저에 유지한다. 테스트용 control block만 생성한다.
+					// 빈 삭제자로 이중 해제를 방지하며 복사 시 shared_ptr의 참조 카운트는 정상 동작한다.
+					const std::shared_ptr<E::CGameObject> sharedObject(pObject, [](E::CGameObject*) {});
+					E::CGameObject* volatile pResult = nullptr;
+
+					// 이미 보관 중인 shared_ptr로 접근 (참조 카운트 변경 없음)
+					auto start = std::chrono::steady_clock::now();
+					for (size_t i = 0; i < iIterations; ++i)
+					{
+						pResult = sharedObject.get();
+					}
+					const double sharedAccessTime = std::chrono::duration<double, std::milli>(
+						std::chrono::steady_clock::now() - start).count();
+
+					// 보관 중인 핸들로 접근 (슬롯과 세대 번호 검사 포함)
+					start = std::chrono::steady_clock::now();
+					for (size_t i = 0; i < iIterations; ++i)
+					{
+						pResult = game.GetGameObjectByHandle(handle);
+					}
+					const double handleAccessTime = std::chrono::duration<double, std::milli>(
+						std::chrono::steady_clock::now() - start).count();
+
+					// shared_ptr를 복사한 뒤 접근 (반복마다 참조 카운트 증가와 감소)
+					start = std::chrono::steady_clock::now();
+					for (size_t i = 0; i < iIterations; ++i)
+					{
+						auto reference = sharedObject;
+						pResult = reference.get();
+					}
+					const double sharedCopyTime = std::chrono::duration<double, std::milli>(
+						std::chrono::steady_clock::now() - start).count();
+
+					// 핸들을 복사한 뒤 접근
+					start = std::chrono::steady_clock::now();
+					for (size_t i = 0; i < iIterations; ++i)
+					{
+						auto reference = handle;
+						pResult = game.GetGameObjectByHandle(reference);
+					}
+					const double handleCopyTime = std::chrono::duration<double, std::milli>(
+						std::chrono::steady_clock::now() - start).count();
+
+					std::wostringstream result;
+					result << std::fixed << std::setprecision(3)
+						<< L"shared_ptr 접근: " << sharedAccessTime << L" ms\n"
+						<< L"핸들 조회: " << handleAccessTime << L" ms\n\n"
+						<< L"shared_ptr 복사 + 접근: " << sharedCopyTime << L" ms\n"
+						<< L"핸들 복사 + 조회: " << handleCopyTime << L" ms";
+					MessageBoxW(nullptr, result.str().c_str(), L"shared_ptr / 핸들 비교 - 100만 회", MB_OK);
+				}
+			}
+#pragma endregion
 
 			// dynamic_cast vs static_cast benchmark 
 			// dynamic_cast: 472ms, static_cast: 41ms
