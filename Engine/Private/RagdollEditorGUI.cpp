@@ -839,7 +839,6 @@ void CRagdollEditorGUI::DrawPreviewControls()
 		"Angular Velocity (Deg/s)",
 		&m_vPhysicsTestAngularVelocityDegrees.x,
 		1.f);
-	ImGui::SameLine();
 	if (!m_bPhysicsPreviewActive)
 	{
 		if (ImGui::Button(
