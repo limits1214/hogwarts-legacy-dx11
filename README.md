@@ -12,9 +12,7 @@
 
 ## 시연영상
 
-[영상 포트폴리오 보기](https://www.youtube.com/watch?v=KKQKjYQcRwg)
-
-임성윤 담당 구간: [**02:00~17:00 — 프레임워크 및 물리 구현**](https://www.youtube.com/watch?v=KKQKjYQcRwg&t=120)
+임성윤 담당 구간: **02:00~17:00 — 프레임워크 및 물리 구현**
 
 ## 프로젝트 정보
 
