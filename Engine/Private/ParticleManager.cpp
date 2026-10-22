@@ -2125,11 +2125,11 @@ void CParticleManager::ComboList(_string comboName, _string resourceName, _strin
 	{
 		for (auto [key, value] : shaders)
 		{
-			_bool bSelect = previewName == key.str;
-			ImGui::PushID(key.str);
-			if (ImGui::Selectable(key.str, &bSelect))
+			_bool bSelect = previewName == key.GetDbgStr();
+			ImGui::PushID(key.GetDbgStr());
+			if (ImGui::Selectable(key.GetDbgStr(), &bSelect))
 			{
-				previewName = key.str;
+				previewName = key.GetDbgStr();
 			}
 			if (bSelect)
 				ImGui::SetItemDefaultFocus();

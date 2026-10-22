@@ -2092,7 +2092,7 @@ void CLevelTerrain::Resources()
 		auto Resource = CGameInstance::Get().GetResource(m_strLevelName);
 		for (const auto& [key, value] : Resource)
 		{
-			const _char* pName = key.str;
+			const _char* pName = key.GetDbgStr();
 			_bool isSelected = m_SelectResourceTag == pName;
 			ImGui::PushID(pName);
 			if (ImGui::Selectable(pName, isSelected))
@@ -2112,7 +2112,7 @@ void CLevelTerrain::Objects()
 	{
 		for (const auto& key : CGameInstance::Get().GetPrototypeTags(m_strLevelName))
 		{
-			const _char* pName = key.str;
+			const _char* pName = key.GetDbgStr();
 			_bool isSelected = m_SelectObjecteTag == pName;
 			ImGui::PushID(pName);
 			if (ImGui::Selectable(pName, isSelected))
