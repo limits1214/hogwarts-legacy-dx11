@@ -1,5 +1,5 @@
-#include "MiniMap.h"
 #include "pch.h"
+#include "MiniMap.h"
 #include "GameInstance.h"
 #include "CameraObject.h"
 #include "Resources.h"

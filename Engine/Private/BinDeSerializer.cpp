@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "BinDeSerializer.h"
 #include "ISerializable.h"
 

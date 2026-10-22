@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "ResLua.h"
 
 CResLua::CResLua(const _string& sPath)

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "BTAnimation.h"
+#include "ComCharacterMoveIntent.h"
 #include "ComAnimator.h" 
 NS_USING(Client)
 

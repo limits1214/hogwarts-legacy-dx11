@@ -6,6 +6,7 @@
 //-------------------------------------------------------------------------------------
 
 
+#include "pch.h"
 #include "DebugDraw.h"
 
 using namespace DirectX;

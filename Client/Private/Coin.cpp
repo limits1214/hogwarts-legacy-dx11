@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Coin.h"
 #include "Client_Defines.h"
 #include "GameInstance.h"
